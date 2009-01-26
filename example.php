@@ -29,12 +29,11 @@ Display formatting information: <input type="checkbox" onclick="toggle(this.chec
 	<tr>
 	<? for ($col=1;$col<=$xls->colcount();$col++) {	?>
 		<td><?= $xls->val($row,$col) ?>&nbsp;
-		<div>[Format=<?=$xls->format($row,$col)?>,FormatIndex=<?=$xls->formatIndex($row,$col)?>]</div></td>
+		<div><br>Format=<?=$xls->format($row,$col)?><br>FormatIndex=<?=$xls->formatIndex($row,$col)?><br>Raw=<?=$xls->raw($row,$col)?></div></td>
 	<? } ?>
 	</tr>
 <? } ?>
 </table>
 
-Note: There seems to be some problem with translating times (and dates with times) correctly.
 </body>
 </html>

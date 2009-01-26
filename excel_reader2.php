@@ -2,7 +2,7 @@
 /**
  * A class for reading Microsoft Excel Spreadsheets.
  *
- * Version 2.0
+ * Version 2.1
  *
  * Enhanced by Matt Kruse < http://mattkruse.com >
  * Maintained at http://code.google.com/p/php-excel-reader/
@@ -33,6 +33,9 @@
 Example Usage:
 
 $data = new Spreadsheet_Excel_Reader("test.xls");
+
+Or conserve memory for large worksheets by not storing the extended 'cellsInfo':
+ $data = new Spreadsheet_Excel_Reader("test.xls",false);
 
 Retrieve formatted value of cell (first or only sheet):
 
@@ -345,7 +348,10 @@ class Spreadsheet_Excel_Reader {
 	}
 	function info($row,$col,$type='',$sheet=0) {
 		$col = $this->getCol($col);
-		if (array_key_exists($row,$this->sheets[$sheet]['cellsInfo']) && array_key_exists($col,$this->sheets[$sheet]['cellsInfo'][$row]) && array_key_exists($type,$this->sheets[$sheet]['cellsInfo'][$row][$col])) {
+		if (array_key_exists('cellsInfo',$this->sheets[$sheet])
+				&& array_key_exists($row,$this->sheets[$sheet]['cellsInfo'])
+				&& array_key_exists($col,$this->sheets[$sheet]['cellsInfo'][$row])
+				&& array_key_exists($type,$this->sheets[$sheet]['cellsInfo'][$row][$col])) {
 			return $this->sheets[$sheet]['cellsInfo'][$row][$col][$type];
 		}
 		return "";
@@ -1086,23 +1092,24 @@ class Spreadsheet_Excel_Reader {
 			}
 
 			if ($type == 'date') {
+				// See http://groups.google.com/group/php-excel-reader-discuss/browse_frm/thread/9c3f9790d12d8e10/f2045c2369ac79de
 				$format = $this->formatRecords['xfrecords'][$xfindex]['format'];
 				$formatIndex = $this->formatRecords['xfrecords'][$xfindex]['formatIndex'];
 				$rectype = 'date';
 				// Convert numeric value into a date
-				if ($numValue > 1) {
-					$utcDays = $numValue - ($this->nineteenFour ? SPREADSHEET_EXCEL_READER_UTCOFFSETDAYS1904 : SPREADSHEET_EXCEL_READER_UTCOFFSETDAYS);
-					$utcValue = round(($utcDays+1) * SPREADSHEET_EXCEL_READER_MSINADAY);
-					$string = date ($format, $utcValue);
-					$raw = $utcValue;
-				} else {
-					$raw = $numValue;
-					$hours = floor($numValue * 24);
-					$mins = floor($numValue * 24 * 60) - $hours * 60;
-					$secs = floor($numValue * SPREADSHEET_EXCEL_READER_MSINADAY) - $hours * 60 * 60 - $mins * 60;
-					$string = date ($format, mktime($hours, $mins, $secs));
-				}
+				$utcDays = floor($numValue - ($this->nineteenFour ? SPREADSHEET_EXCEL_READER_UTCOFFSETDAYS1904 : SPREADSHEET_EXCEL_READER_UTCOFFSETDAYS));
+				$utcValue = ($utcDays+1) * SPREADSHEET_EXCEL_READER_MSINADAY;
+				$dateinfo = getdate($utcValue);
 
+				$raw = $numValue;
+				$fractionalDay = $numValue - floor($numValue) + .0000001; // The .0000001 is to fix for php/excel fractional diffs
+
+				$totalseconds = floor(SPREADSHEET_EXCEL_READER_MSINADAY * $fractionalDay);
+				$secs = $totalseconds % 60;
+				$totalseconds -= $secs;
+				$hours = floor($totalseconds / (60 * 60));
+				$mins = floor($totalseconds / 60) % 60;
+				$string = date ($format, mktime($hours, $mins, $secs, $dateinfo["mon"], $dateinfo["mday"], $dateinfo["year"]));
 			} else if ($type == 'number') {
 				$format = $this->formatRecords['xfrecords'][$xfindex]['format'];
 				$formatIndex = $this->formatRecords['xfrecords'][$xfindex]['formatIndex'];
