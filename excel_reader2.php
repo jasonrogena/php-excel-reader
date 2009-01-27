@@ -2,7 +2,7 @@
 /**
  * A class for reading Microsoft Excel Spreadsheets.
  *
- * Version 2.1
+ * Version 2.11
  *
  * Enhanced by Matt Kruse < http://mattkruse.com >
  * Maintained at http://code.google.com/p/php-excel-reader/
@@ -27,6 +27,12 @@
  * @version	CVS: $Id: reader.php 19 2007-03-13 12:42:41Z shangxiao $
  * @link	   http://pear.php.net/package/Spreadsheet_Excel_Reader
  * @see		OLE, Spreadsheet_Excel_Writer
+ *
+ * CHANGE LOG:
+ * Version 2.1  - 2009-01-26 - Fixed date issues, introduced new constructor
+ *                flag to ignore extended cell info.
+ * Version 2.11 - 2009-01-27 - New constructor flag wasn't properly included
+ *                in the previous release. Fixed now.
  */
 
 /*
@@ -524,7 +530,7 @@ class Spreadsheet_Excel_Reader {
 	 *
 	 * Some basic initialisation
 	 */
-	function Spreadsheet_Excel_Reader($file='')
+	function Spreadsheet_Excel_Reader($file='',$store_extended_info=true)
 	{
 		$this->_ole =& new OLERead();
 		$this->setUTFEncoder('iconv');
@@ -532,6 +538,7 @@ class Spreadsheet_Excel_Reader {
 			$name = ((($i-1)/26>=1)?chr(($i-1)/26+64):'') . chr(($i-1)%26+65);;
 			$this->colnames[strtolower($name)] = $i;
 		}
+		$this->store_extended_info = $store_extended_info;
 		if ($file!="") {
 			$this->read($file);
 		}
@@ -1151,10 +1158,12 @@ class Spreadsheet_Excel_Reader {
 		$this->sheets[$this->sn]['maxrow'] = max($this->sheets[$this->sn]['maxrow'], $row + $this->_rowoffset);
 		$this->sheets[$this->sn]['maxcol'] = max($this->sheets[$this->sn]['maxcol'], $col + $this->_coloffset);
 		$this->sheets[$this->sn]['cells'][$row + $this->_rowoffset][$col + $this->_coloffset] = $string;
-		$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['raw'] = $raw;
-		$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['type'] = $type;
-		$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['format'] = $format;
-		$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['formatIndex'] = $formatIndex;
+		if ($this->store_extended_info) {
+			$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['raw'] = $raw;
+			$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['type'] = $type;
+			$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['format'] = $format;
+			$this->sheets[$this->sn]['cellsInfo'][$row + $this->_rowoffset][$col + $this->_coloffset]['formatIndex'] = $formatIndex;
+		}
 	}
 
 
